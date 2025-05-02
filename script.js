@@ -1,18 +1,27 @@
 let trustScore = 5;
 let roundCount = 0;
 const MAX_ROUNDS = 6;
-const chatHistory = [{ role: "system", content: systemPrompt }];
 
-document.getElementById("start-btn").onclick = nextRound;
+document.getElementById("start-btn").addEventListener("click", async () => {
+  document.getElementById("start-btn").style.display = "none";
+  document.getElementById("game-output").innerText = "正在与诈骗分子对话，请稍候...";
+  await nextRound();
+});
 
-async function nextRound() {
+async function nextRound(playerChoice = null) {
+  if (playerChoice) {
+    if (playerChoice === "A") trustScore += 3;
+    else if (playerChoice === "B") trustScore += 1;
+    else if (playerChoice === "C") trustScore -= 2;
+  }
+
   if (roundCount >= MAX_ROUNDS || trustScore >= 10 || trustScore <= 0) {
     return endGame();
   }
 
   roundCount++;
 
-  // 插入托儿发言：第2或第4回合触发
+  // 托儿轮次插入
   if (roundCount === 2 || roundCount === 4) {
     try {
       const decoyRes = await fetch(API_URL, {
@@ -39,11 +48,12 @@ async function nextRound() {
     }
   }
 
-  // 请求 HR 的回复
-  chatHistory.push({
-    role: "user",
-    content: `当前信任度：${trustScore}。请继续以HR身份诱导用户，提供三种自然、含蓄但有心理暗示力的选项。`
-  });
+  // 构建当前对话请求，清空上下文，仅包含systemPrompt + 当前信任度说明
+  let status = "低";
+  if (trustScore >= 9) status = "高";
+  else if (trustScore >= 6) status = "中";
+
+  const userInstruction = `当前玩家信任度为 ${trustScore}（${status}）。请以HR身份继续诱导，输出欢迎语+ABC三项选项，选项必须是玩家角度的行为或心理反应。`;
 
   try {
     const res = await fetch(API_URL, {
@@ -54,52 +64,33 @@ async function nextRound() {
       },
       body: JSON.stringify({
         model: "deepseek-chat",
-        messages: chatHistory,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userInstruction }
+        ],
         temperature: 0.7
       })
     });
 
-    if (!res.ok) throw new Error(`API出错: ${res.status}`);
     const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content || "（无回应）";
-    chatHistory.push({ role: "assistant", content: reply });
+    const reply = data.choices?.[0]?.message?.content || "(无回复)";
+    document.getElementById("dialogue-box").innerText = `[HR] ${reply}`;
 
-    showDialogueAndChoices(reply);
+    // 生成玩家选择按钮
+    ["A", "B", "C"].forEach(label => {
+      const button = document.createElement("button");
+      button.innerText = label;
+      button.onclick = () => nextRound(label);
+      document.getElementById("choices").appendChild(button);
+    });
 
   } catch (err) {
-    document.getElementById("dialogue-box").innerText = "发生错误：" + err.message;
+    document.getElementById("dialogue-box").innerText = "加载失败，请检查网络或API密钥。";
+    console.log("API错误：", err.message);
   }
-}
-
-function showDialogueAndChoices(reply) {
-  const [text, ...lines] = reply.split("\n").filter(Boolean);
-  document.getElementById("dialogue-box").innerText = text;
-  const optionsDiv = document.getElementById("options");
-  optionsDiv.innerHTML = "";
-
-  lines.forEach((line, i) => {
-    const btn = document.createElement("button");
-    btn.innerText = line.trim();
-    btn.onclick = () => {
-      if (i === 0) trustScore += 3;
-      else if (i === 1) trustScore += 1;
-      else if (i === 2) trustScore -= 2;
-      nextRound();
-    };
-    optionsDiv.appendChild(btn);
-  });
 }
 
 function endGame() {
-  const box = document.getElementById("dialogue-box");
-  let message = "";
-  if (trustScore >= 10) {
-    message = "你完全相信了HR，并点击了他提供的链接......很遗憾，你被骗了。";
-  } else if (trustScore <= 0) {
-    message = "你表现得很谨慎，成功识破了这场骗局！";
-  } else {
-    message = "你选择了中立路线，暂时避免了损失，但仍需提高警惕。";
-  }
-  box.innerText = message;
-  document.getElementById("options").innerHTML = "";
+  document.getElementById("choices").innerHTML = "";
+  document.getElementById("dialogue-box").innerText += `\n\n游戏结束。你的最终信任度为：${trustScore}`;
 }
