@@ -1,5 +1,5 @@
 const API_URL = "https://api.deepseek.com/chat/completions";
-const API_KEY = "你的API_KEY"; // 请在此替换为你自己的 DeepSeek Key
+const API_KEY = "sk-9f2b2651659145cb9573c3659424f26b"; // 请在此替换为你自己的 DeepSeek Key
 
 function generatePrompt(trust, strategy, state) {
   return `
