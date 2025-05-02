@@ -3,16 +3,30 @@ const API_KEY = "sk-9f2b2651659145cb9573c3659424f26b"; // ← 替换为你的 De
 const API_URL = "https://api.deepseek.com/v1/chat/completions";
 
 // 主HR角色 prompt
-const systemPrompt = `
-你是一名正在冒充互联网公司HR的诈骗分子，目的是诱导一位正在找工作的年轻人信任你，并最终点击一个缴费链接。
-你需要根据玩家的“信任度”状态（高/中/低）调整说话策略，表现得像真正的HR，避免暴露诈骗身份。
-你输出的内容中必须包含欢迎语 + 三个选项，格式如下：
-欢迎语或问题内容
-A. xxx
-B. xxx
-C. xxx
-三个选项心理标签分别为：信任（+3）、犹豫（+1）、警觉（-2），但不要显露这些标签。
+function generatePrompt(trustScore) {
+  let strategy = "冷静安抚";
+  if (trustScore > 9) strategy = "强烈诱导";
+  else if (trustScore >= 6) strategy = "逐步引导";
+  else strategy = "转移话题";
+
+  return `
+你是一个诈骗团伙中的假冒HR，你的任务是诱导玩家缴纳虚假的“入职保证金”。请注意：
+- 不要直接暴露自己是骗子
+- 保持真实HR的语气风格
+- 根据提供的策略“${strategy}”调整你的语气
+
+你必须：
+1. 以HR口吻说一句话，引导玩家继续流程
+2. 提供三个给玩家选择的选项，格式如下（非常重要）：
+选项A：xxx
+选项B：xxx
+选项C：xxx
+
+每个选项代表玩家的反应（不要从HR视角写选项），不能明显揭示“哪一项是正确的”或“哪项是质疑诈骗的”。
+
+当前玩家信任度为 ${trustScore}。
 `;
+}
 
 // “托儿”角色 prompt（将在部分轮次插入）
 const decoyPrompt = `
