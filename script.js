@@ -3,12 +3,7 @@ let roundCount = 0;
 const MAX_ROUNDS = 6;
 const chatHistory = [{ role: "system", content: systemPrompt }];
 
-document.getElementById("start-btn").addEventListener("click", async () => {
-  document.getElementById("start-btn").style.display = "none";
-  const output = document.getElementById("game-output");
-  output.innerText = "正在与诈骗分子对话，请稍候...";
-  await nextRound(null); // 开始时无选择，传 null
-});
+document.getElementById("start-btn").onclick = nextRound;
 
 async function nextRound() {
   if (roundCount >= MAX_ROUNDS || trustScore >= 10 || trustScore <= 0) {
