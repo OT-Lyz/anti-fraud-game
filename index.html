@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <title>反诈模拟游戏</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>反诈游戏 - 求职防骗模拟器</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>虚拟招聘 · 你能识破骗局吗？</h1>
-  <div id="dialogue">点击下方按钮开始</div>
-  <div id="choices"></div>
-  <button onclick="nextRound()">开始游戏</button>
-
+  <div class="container">
+    <h1>求职防骗模拟器</h1>
+    <p id="dialogue-box">欢迎进入游戏，点击下方开始与HR对话。</p >
+    <div id="options"></div>
+    <button id="start-btn">开始游戏</button>
+  </div>
   <script src="config.js"></script>
   <script src="script.js"></script>
 </body>
