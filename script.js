@@ -2,9 +2,8 @@ let trustScore = 5;
 let round = 0;
 
 document.getElementById("start-button").addEventListener("click", async () => {
-  document.getElementById("start-button").style.display = "none"; // 开始后隐藏按钮
-  const output = document.getElementById("game-output");
-  output.innerText = "正在与诈骗分子对话，请稍候...";
+  document.getElementById("start-button").style.display = "none";
+  document.getElementById("game-output").innerText = "游戏开始，正在生成对话...";
   nextRound(null);
 });
 
