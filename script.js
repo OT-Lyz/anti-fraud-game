@@ -1,70 +1,105 @@
-let trust = 5;
-let round = 1;
+let trustScore = 5;
+let roundCount = 0;
+const MAX_ROUNDS = 6;
+const chatHistory = [{ role: "system", content: systemPrompt }];
+
+document.getElementById("start-btn").onclick = nextRound;
 
 async function nextRound() {
-  const state = trust > 9 ? "完全信任" : trust > 6 ? "谨慎接受" : "疑虑";
-  const strategy = trust > 9 ? "强烈引导" : trust > 6 ? "冷静安抚" : "转移话题";
+  if (roundCount >= MAX_ROUNDS || trustScore >= 10 || trustScore <= 0) {
+    return endGame();
+  }
 
-  const prompt = generatePrompt(trust, strategy, state);
+  roundCount++;
 
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages: [
-        { role: "system", content: "你是一名正在进行招聘对话的HR，请模拟真实语气。" },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.7
-    })
+  // 插入托儿发言：第2或第4回合触发
+  if (roundCount === 2 || roundCount === 4) {
+    try {
+      const decoyRes = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            { role: "system", content: decoyPrompt },
+            { role: "user", content: "请说一段鼓励玩家信任HR的评论。" }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      const decoyData = await decoyRes.json();
+      const decoyText = decoyData.choices?.[0]?.message?.content || "（托儿沉默不语）";
+      document.getElementById("dialogue-box").innerText += `\n\n[其他求职者] ${decoyText}`;
+    } catch (err) {
+      console.log("托儿加载失败：", err.message);
+    }
+  }
+
+  // 请求 HR 的回复
+  chatHistory.push({
+    role: "user",
+    content: `当前信任度：${trustScore}。请继续以HR身份诱导用户，提供三种自然、含蓄但有心理暗示力的选项。`
   });
 
-  const data = await response.json();
-  const reply = data.choices[0].message.content;
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: chatHistory,
+        temperature: 0.7
+      })
+    });
 
-  const dialogueBox = document.getElementById("dialogue");
-  dialogueBox.innerHTML = `<p><strong>[HR]</strong>：${reply}</p >`;
+    if (!res.ok) throw new Error(`API出错: ${res.status}`);
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || "（无回应）";
+    chatHistory.push({ role: "assistant", content: reply });
 
-  showToerMessage(round, trust);
-  showChoices();
+    showDialogueAndChoices(reply);
 
-  round += 1;
-}
-
-function showToerMessage(round, trust) {
-  const messages = [
-    "我刚刚也填完了资料，流程挺顺的。",
-    "这家流程看起来正规，我已经开始线上培训了。",
-    "HR说我下周可以线上入职，我已经交完材料啦。"
-  ];
-  if (round % 2 === 0) {
-    const msg = messages[Math.floor(Math.random() * messages.length)];
-    const dialogueBox = document.getElementById("dialogue");
-    dialogueBox.innerHTML += `<p><strong>[张晨]</strong>：${msg}</p >`;
+  } catch (err) {
+    document.getElementById("dialogue-box").innerText = "发生错误：" + err.message;
   }
 }
 
-function showChoices() {
-  const choices = [
-    { text: "好，我这就点链接", trustChange: 3 },
-    { text: "这个流程我有点不太懂", trustChange: 0 },
-    { text: "我可以线下面试吗？", trustChange: -2 }
-  ];
+function showDialogueAndChoices(reply) {
+  const [text, ...lines] = reply.split("\n").filter(Boolean);
+  document.getElementById("dialogue-box").innerText = text;
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
 
-  const container = document.getElementById("choices");
-  container.innerHTML = "";
-
-  choices.forEach(choice => {
+  lines.forEach((line, i) => {
     const btn = document.createElement("button");
-    btn.innerText = choice.text;
+    btn.innerText = line.trim();
     btn.onclick = () => {
-      trust += choice.trustChange;
+      if (i === 0) trustScore += 3;
+      else if (i === 1) trustScore += 1;
+      else if (i === 2) trustScore -= 2;
       nextRound();
     };
-    container.appendChild(btn);
+    optionsDiv.appendChild(btn);
   });
+}
+
+function endGame() {
+  const box = document.getElementById("dialogue-box");
+  let message = "";
+  if (trustScore >= 10) {
+    message = "你完全相信了HR，并点击了他提供的链接......很遗憾，你被骗了。";
+  } else if (trustScore <= 0) {
+    message = "你表现得很谨慎，成功识破了这场骗局！";
+  } else {
+    message = "你选择了中立路线，暂时避免了损失，但仍需提高警惕。";
+  }
+  box.innerText = message;
+  document.getElementById("options").innerHTML = "";
 }
