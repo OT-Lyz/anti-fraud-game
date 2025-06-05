@@ -1,5 +1,5 @@
 // DeepSeek API 配置
-const API_KEY = "sk-9f2b2651659145cb9573c3659424f26b";
+const API_KEY = "";
 const API_URL = "https://api.deepseek.com/v1/chat/completions";
 
 // 主HR角色 prompt
